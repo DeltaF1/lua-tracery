@@ -1,7 +1,7 @@
 local expand
 local generate
 
--- Shamelessly ported from katecompton's reference implementation
+-- Modifer code ported from [Tracery](https://github.com/galaxykate/tracery) © Kate Compton 2015
 local function isVowel(text)
   text = text:lower()
   return text == "a" or
