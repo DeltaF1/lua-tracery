@@ -41,10 +41,10 @@ local modifiers = {
 }
 
 function generate(symbol, context)
-	local rule = context[symbol]
+  local rule = context[symbol]
   
   local localContext = {}
-	setmetatable(localContext, {__index = context})
+  setmetatable(localContext, {__index = context})
   
   -- Return the expanded string and the (potentially) modified context
   local expanded = expand(rule, localContext)
@@ -55,45 +55,45 @@ function generate(symbol, context)
 end
 
 function expand(rule, context)
-	local localContext = {}
-	setmetatable(localContext, {__index = context})
-	
-	if type(rule) == "table" then
-		rule = rule[math.random(#rule)]
+  local localContext = {}
+  setmetatable(localContext, {__index = context})
+  
+  if type(rule) == "table" then
+    rule = rule[math.random(#rule)]
   elseif type(rule) == "function" then
     rule = tostring(rule())
-	elseif rule == nil then
+  elseif rule == nil then
     return nil
   end
-	
+  
   -- Keep track of where in the text we are
-	local pointer = 0
-	while true do
+  local pointer = 0
+  while true do
     -- Hack to get around pattern matching restrictions
     
     -- Find the locations of rules and actions
-		local a, b = rule:find("#.-#", pointer)
-		local c, d = rule:find("%[.-%]", pointer)
+    local a, b = rule:find("#.-#", pointer)
+    local c, d = rule:find("%[.-%]", pointer)
     
     -- Keep track of the area we are evaluating
     local istart, iend
     
     -- Find the earliest pair of istart,iend and assign them
-		if (c == nil) or (a and c and a < c) then
-			istart, iend = a,b
-		else
-			istart, iend = c,d
-		end
-		if istart == nil then
-			break
-		end
-		
-		local token = rule:sub(istart, iend)
-		
-		local replacement
+    if (c == nil) or (a and c and a < c) then
+      istart, iend = a,b
+    else
+      istart, iend = c,d
+    end
+    if istart == nil then
+      break
+    end
     
-		if token:sub(1,1) == "#" then
-			-- It's a rule
+    local token = rule:sub(istart, iend)
+    
+    local replacement
+    
+    if token:sub(1,1) == "#" then
+      -- It's a rule
       
       -- Strip out the "#" characters
       local stripped = token:sub(2,-2)
@@ -123,37 +123,37 @@ function expand(rule, context)
         end
         replacement = f(replacement)
       end
-		elseif token:sub(1,1) == "[" then
-			-- It's an action
+    elseif token:sub(1,1) == "[" then
+      -- It's an action
       name, value = token:match("%[(.-):(.-)%]")
       if value == "POP" then
         localContext[name] = nil
       else
         localContext[name] = expand(value, localContext)
-			end
+      end
       
       -- Actions evaluate to empty text
-			replacement = ""
-		end
+      replacement = ""
+    end
 
     -- Replace the area where the token was (istart -> iend) with 
     -- the replacement text generated from the previous step
-		rule = rule:sub(1, istart-1)..replacement..rule:sub(iend+1)
+    rule = rule:sub(1, istart-1)..replacement..rule:sub(iend+1)
     
     -- Calculate the new "iend" position based on how much the text was shifted
     -- by replacement
-		local diff = #replacement - #token
-		
-		pointer = iend + diff
-	end
-	
+    local diff = #replacement - #token
+    
+    pointer = iend + diff
+  end
+  
   -- If there are any actions which were not explicitly POP'd
   -- then propagate them up the call-stack to apply to future generations
   for k,v in pairs(localContext) do
     context[k] = v
   end
   
-	return rule
+  return rule
 end
 
 -- TODO: Make this actually use a class pattern?
