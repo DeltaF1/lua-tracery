@@ -72,8 +72,18 @@ function expand(rule, context)
     -- Hack to get around pattern matching restrictions
     
     -- Find the locations of rules and actions
-    local a, b = rule:find("#.-#", pointer)
-    local c, d = rule:find("%[.-%]", pointer)
+    
+    -- Use a call to string:sub instead of passing pointer to the find call so we can
+    -- take advantage of the "start of string" operator in pattern matching
+    local offsetrule = rule:sub(pointer+1)
+    local a, b, c, d
+    a,b = offsetrule:find("^#.-[^\\]#")
+    if a == nil then
+      a,b = offsetrule:find("[^\\]#.-[^\\]#")
+      -- offset a since we're matching the non \ character
+      if a then a = a + 1 end
+    end
+    c, d = offsetrule:find("%[.-%]")
     
     -- Keep track of the area we are evaluating
     local istart, iend
@@ -87,6 +97,8 @@ function expand(rule, context)
     if istart == nil then
       break
     end
+    
+    istart,iend = istart+pointer,iend+pointer
     
     local token = rule:sub(istart, iend)
     
