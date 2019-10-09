@@ -11,7 +11,7 @@ testGrammar = {
   animal = {"zebra", "osprey", "rhinoceros", "cassowary", "donkey", "eel part"},
   group = {"group", "herd", "flock", "murder"},
   number = function() return 10 end,
-  }
+}
 
 local grammar = Grammar(testGrammar)
 
@@ -44,11 +44,11 @@ Grammars can contain functions as the value for a symbol. This function will be 
 
 ```lua
 >>> grammar = Grammar({
-		origin = "Your lucky number is: #number#",
-		number = function()
-			return math.random(42)
-		end
-	})
+      origin = "Your lucky number is: #number#",
+      number = function()
+        return math.random(42)
+      end
+    })
 
 >>> text, _ = grammar.generate(origin)
 >>> print(text)
