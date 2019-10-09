@@ -165,6 +165,8 @@ function expand(rule, context)
     context[k] = v
   end
   
+  rule = rule:gsub("\\#", "#")
+  
   return rule
 end
 
