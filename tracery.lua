@@ -40,7 +40,9 @@ local modifiers = {
   upper = string.upper,
 }
 
-function generate(symbol, context)
+local generate, expand
+
+generate = function(symbol, context)
   local rule = context[symbol]
   
   local localContext = {}
@@ -54,7 +56,7 @@ function generate(symbol, context)
   return expanded, localContext
 end
 
-function expand(rule, context)
+expand = function(rule, context)
   local localContext = {}
   setmetatable(localContext, {__index = context})
   
