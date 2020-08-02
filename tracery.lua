@@ -11,7 +11,7 @@ local function isVowel(text)
          text == "u"
 end
 
-local modifiers = {
+local baseEngModifiers = {
   capitalize = function(text)
     return text:sub(1,1):upper()..text:sub(2)
   end,
@@ -40,23 +40,21 @@ local modifiers = {
   upper = string.upper,
 }
 
-local generate, expand
-
-generate = function(symbol, context)
+generate = function(self, symbol, context)
   local rule = context[symbol]
   
   local localContext = {}
   setmetatable(localContext, {__index = context})
   
   -- Return the expanded string and the (potentially) modified context
-  local expanded = expand(rule, localContext)
+  local expanded = expand(self, rule, localContext)
   if expanded == nil then
       expanded = "(("..symbol.."))"
   end
   return expanded, localContext
 end
 
-expand = function(rule, context)
+expand = function(self, rule, context)
   local localContext = {}
   setmetatable(localContext, {__index = context})
   
@@ -122,7 +120,7 @@ expand = function(rule, context)
       
       -- Generate text from the symbol
       local _context
-      replacement, _context = generate(stripped, localContext)
+      replacement, _context = generate(self, stripped, localContext)
       
       -- If any actions were performed as a result of this generation
       -- apply them to the current context
@@ -130,7 +128,7 @@ expand = function(rule, context)
       
       -- Iterate over the modifiers and apply them to the generated text
       for i = 2,#parts do
-        local f = modifiers[parts[i]]
+        local f = self.modifiers[parts[i]]
         if not f then
           print("unknown modifier \""..parts[i].."\"")
           f = function(text) return text end
@@ -139,11 +137,11 @@ expand = function(rule, context)
       end
     elseif token:sub(1,1) == "[" then
       -- It's an action
-      name, value = token:match("%[(.-):(.-)%]")
+      local name, value = token:match("%[(.-):(.-)%]")
       if value == "POP" then
         localContext[name] = nil
       else
-        localContext[name] = expand(value, localContext)
+        localContext[name] = expand(self, value, localContext)
       end
       
       -- Actions evaluate to empty text
@@ -172,8 +170,7 @@ expand = function(rule, context)
   return rule
 end
 
--- TODO: Make this actually use a class pattern?
-local function Grammar(grammar)
+local function createGrammar(grammar)
   -- Create a proxy context to add overriding rules to
   local context
   if grammar then
@@ -182,24 +179,41 @@ local function Grammar(grammar)
     context = {}
   end
 
-  return {
-    generate = function(symbol)
-      symbol = symbol or "origin"
-      return generate(symbol, context)
+  local obj = {
+    context = context,
+    generate = function(self, symbol)
+      return expand(self, "#"..(symbol or "origin").."#", self.context), self.context
     end,
-    addRule = function(symbol, value)
-      context[symbol] = value
+    expand = function(self, text)
+      return expand(self, text, self.context), self.context
     end,
-    delRule = function(symbol)
-      context[symbol] = nil
+    addRule = function(self, symbol, value)
+      self.context[symbol] = value
     end,
-    pushContext = function(_context)
-      context = setmetatable(_context, {__index=context})
+    delRule = function(self, symbol)
+      self.context[symbol] = nil
     end,
-    popContext = function()
-      context = getmetatable(context).__index
-    end
+    pushRules = function(self, _context)
+      self.context = setmetatable(_context, {__index=self.context})
+    end,
+    popRules = function(self)
+      self.context = getmetatable(self.context).__index
+    end,
+    modifiers = {},
+    addModifiers = function(self, modifiers)
+      for k,v in pairs(modifiers) do
+        self.modifiers[k] = v
+      end
+    end,
+    clearState = function(self)
+      for k,v in pairs(self.context) do
+        self.context[k] = nil
+      end
+    end,
   }
+  obj.flatten = obj.expand
+
+  return obj
 end
 
-return {Grammar = Grammar}
+return {createGrammar = createGrammar, baseEngModifiers=baseEngModifiers}
